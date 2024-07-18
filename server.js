@@ -7,6 +7,8 @@ const bodyParser = require("body-parser");
 require("dotenv").config();
 const userSignUp = require("./model/userSignUpModel");
 const employerSignUp = require("./model/employerSignUpModel");
+const jobPostData = require("./model/JobPostDataModel");
+const bookmark = require("./model/bookmarkModel");
 
 // middleware
 const app = express();
@@ -28,7 +30,7 @@ db.once("open", () => console.log("Connected to mongoDB"));
 
 // userSignUp
 app.post("/signup", async (req, res) => {
-  console.log("request",req);
+  console.log("request", req);
   const {
     userSignFullName,
     userSignEmail,
@@ -47,33 +49,32 @@ app.post("/signup", async (req, res) => {
       userSignConfirmPassword &&
       userSignPassword === userSignConfirmPassword
     ) {
-      console.log("alive")
+      console.log("alive");
       const hashedPassword = await bcrypt.hash(userSignPassword, 10);
       const hashedConfirmPassword = await bcrypt.hash(
         userSignConfirmPassword,
-        10);
+        10
+      );
       const newUser = new userSignUp({
         userSignFullName,
         userSignEmail,
         userSignPassword: hashedPassword,
         userSignConfirmPassword: hashedConfirmPassword,
-        userSignMobileNo
+        userSignMobileNo,
       });
-      console.log("newuser",newUser);
+      console.log("newuser", newUser);
       await newUser.save();
 
       res.status(201).json({ message: " SignUp successful" });
     } else {
       console.log("Password does not match");
       return res.status(400).json({ message: "Password does not match" });
-
     }
   } catch (err) {
     console.error(err); // Log the error for debugging purposes
     res.status(500).json({ message: "server error" });
   }
 });
-
 
 // userLogin
 app.post("/login", async (req, res) => {
@@ -104,23 +105,22 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
 // Middleware to check for token for authentication
 const verifyTokenUser = (req, res, next) => {
   console.log("Request headers:", req.headers);
-  const authHeader = req.headers['authorization'];
+  const authHeader = req.headers["authorization"];
 
   if (!authHeader) {
     console.log("No Authorization header present");
-    return res.status(404).json({ message: 'No token provided' });
+    return res.status(404).json({ message: "No token provided" });
   }
 
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.split(" ")[1];
   console.log("Extracted token:", token);
   console.log("Running verifyToken middleware");
 
   if (!token) {
-    return res.status(404).json({ message: 'No token provided' });
+    return res.status(404).json({ message: "No token provided" });
   }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
@@ -133,13 +133,12 @@ const verifyTokenUser = (req, res, next) => {
   });
 };
 
-
 // getting data of particular user using token
 app.get("/userdata", verifyTokenUser, async (req, res) => {
   try {
     console.log("User ID from token:", req.userId);
     const user = await userSignUp.findById(req.userId);
-    console.log("User found:", user); 
+    console.log("User found:", user);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -147,10 +146,62 @@ app.get("/userdata", verifyTokenUser, async (req, res) => {
 
     res.status(200).json({ user });
   } catch (err) {
-    console.log("Server error:", err); 
+    console.log("Server error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// bookmark posting
+app.post("/bookmark", async (req, res) => {
+  const { bookmarkId } = req.body;
+
+  try {
+      // Create a new Bookmark document with the received bookmarkId
+      const newBookmark = new bookmark({ bookmarkId });
+      
+      // Save the new Bookmark document to MongoDB
+      await newBookmark.save();
+      
+      // Send a success response
+      res.status(201).json({ message: "Bookmark saved successfully" });
+  } catch (err) {
+      // Handle any errors
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get('/getBookMark', async(req, res)=>{
+  try{
+    const bookmarks = await bookmark.find({});
+    res.status(200).json(bookmarks);
+  }catch(err){
+    console.error(err);
+    res.status(500).json({message:"server error"})
+
+  }
+})
+
+// Example route to remove a bookmark by ID
+app.delete('/bookmark/:id', async (req, res) => {
+  const bookmarkId = req.params.id;
+  console.log("id of book:",bookmarkId);
+
+  try {
+    // Use Mongoose to find and remove the bookmark by ID
+    const deletedBookmark = await bookmark.findOneAndDelete({ bookmarkId: bookmarkId });
+
+    if (!deletedBookmark) {
+      return res.status(404).json({ message: 'Bookmark not found' });
+    }
+
+    res.json({ message: 'Bookmark deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting bookmark:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
 /////////////////////////////////       For Employer       /////////////////////////////////
 
@@ -213,38 +264,45 @@ app.post("/employersignup", async (req, res) => {
 app.post("/employerlogin", async (req, res) => {
   const { employerLoginEmail, employerLoginPassword } = req.body;
 
-  const employer = await employerSignUp.findOne({employerSignEmail:employerLoginEmail});
+  const employer = await employerSignUp.findOne({
+    employerSignEmail: employerLoginEmail,
+  });
   console.log("employer:", employer);
-  if(!employer) return res.status(400).json({message: "Invalid email"})
+  if (!employer) return res.status(400).json({ message: "Invalid email" });
 
-  const passwordValid = await bcrypt.compare(employerLoginPassword, employer.employerSignPassword);
-  if(!passwordValid) return res.status(400).json({message:"Invalid password"});
+  const passwordValid = await bcrypt.compare(
+    employerLoginPassword,
+    employer.employerSignPassword
+  );
+  if (!passwordValid)
+    return res.status(400).json({ message: "Invalid password" });
 
-  const token = jwt.sign({userId:employer._id}, process.env.JWT_SECRET ,{expiresIn:'1h'});
-  res.status(200).json({token});
+  const token = jwt.sign({ userId: employer._id }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+  res.status(200).json({ token });
 });
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => console.log("Server connected to", port));
 
-
 // Employer token verify and authentication
 
-const verifyTokenEmploy = (req,res,next) => {
+const verifyTokenEmploy = (req, res, next) => {
   console.log("Request headers:", req.headers);
-  const authHeader = req.headers['authorization'];
+  const authHeader = req.headers["authorization"];
 
   if (!authHeader) {
     console.log("No Authorization header present");
-    return res.status(404).json({ message: 'No token provided' });
+    return res.status(404).json({ message: "No token provided" });
   }
 
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.split(" ")[1];
   console.log("Extracted token:", token);
   console.log("Running verifyToken middleware");
 
   if (!token) {
-    return res.status(404).json({ message: 'No token provided' });
+    return res.status(404).json({ message: "No token provided" });
   }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
@@ -255,15 +313,14 @@ const verifyTokenEmploy = (req,res,next) => {
     req.userId = decoded.userId;
     next();
   });
-}
-
+};
 
 // getting data of particular user using token
 app.get("/employdata", verifyTokenEmploy, async (req, res) => {
   try {
     console.log("User ID from token:", req.userId);
     const user = await employerSignUp.findById(req.userId);
-    console.log("User found:", user); 
+    console.log("User found:", user);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -271,8 +328,76 @@ app.get("/employdata", verifyTokenEmploy, async (req, res) => {
 
     res.status(200).json({ user });
   } catch (err) {
-    console.log("Server error:", err); 
+    console.log("Server error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
+//posting job data to backend
+app.post("/jobpost", verifyTokenEmploy, async (req, res) => {
+  const {
+    companyName,
+    companyIndustry,
+    companyDescription,
+    jobTitle,
+    JobOption,
+    jobCity,
+    jobArea,
+    jobPincode,
+    jobStreet,
+    jobType,
+    jobSchedule,
+    jobMinValue,
+    jobMaxValue,
+    jobRate,
+    jobSkill,
+  } = req.body;
+
+  const userId = req.userId;
+
+  try {
+    const newJobPost = {
+      userId: userId,
+      companyName,
+      companyIndustry,
+      companyDescription,
+      jobTitle,
+      JobOption,
+      jobCity,
+      jobArea,
+      jobPincode,
+      jobStreet,
+      jobType,
+      jobSchedule,
+      jobMinValue,
+      jobMaxValue,
+      jobRate,
+      jobSkill,
+    };
+
+    const jobPost = await jobPostData.findOneAndUpdate(
+      {},
+      { $push: { jobPosts: newJobPost } },
+      { new: true, upsert: true }
+    );
+    res
+      .status(201)
+      .json({ message: "Job post created successfully", jobPost: jobPost });
+  } catch (err) {
+    console.error("Error creating job post:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// getting posted job data of particular user using token
+app.get("/postedjob", async (req, res) => {
+  try {
+    const jobPosts = await jobPostData.find();
+    res.status(200).json(jobPosts);
+  } catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while fetching job posts", error });
+  }
+});
