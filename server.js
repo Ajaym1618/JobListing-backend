@@ -3,12 +3,16 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const multer = require("multer");
 const bodyParser = require("body-parser");
 require("dotenv").config();
 const userSignUp = require("./model/userSignUpModel");
 const employerSignUp = require("./model/employerSignUpModel");
 const jobPostData = require("./model/JobPostDataModel");
 const bookmark = require("./model/bookmarkModel");
+const contactInfo = require("./model/contactInfoModel");
+const applied = require("./model/appliedModel");
+const qualification = require("./model/qualificationModel");
 
 // middleware
 const app = express();
@@ -101,7 +105,7 @@ app.post("/login", async (req, res) => {
     console.log(token);
     res.status(200).json({ token });
   } catch (err) {
-    res.status(500).json({ message: "server error" });
+    res.status(400).json({ message: "server error" });
   }
 });
 
@@ -156,52 +160,208 @@ app.post("/bookmark", async (req, res) => {
   const { bookmarkId } = req.body;
 
   try {
-      // Create a new Bookmark document with the received bookmarkId
-      const newBookmark = new bookmark({ bookmarkId });
-      
-      // Save the new Bookmark document to MongoDB
-      await newBookmark.save();
-      
-      // Send a success response
-      res.status(201).json({ message: "Bookmark saved successfully" });
+    // Create a new Bookmark document with the received bookmarkId
+    const newBookmark = new bookmark({ bookmarkId });
+
+    // Save the new Bookmark document to MongoDB
+    await newBookmark.save();
+
+    // Send a success response
+    res.status(201).json({ message: "Bookmark saved successfully" });
   } catch (err) {
-      // Handle any errors
-      console.error(err);
-      res.status(500).json({ message: "Server error" });
+    // Handle any errors
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-app.get('/getBookMark', async(req, res)=>{
-  try{
+app.get("/getBookMark", async (req, res) => {
+  try {
     const bookmarks = await bookmark.find({});
     res.status(200).json(bookmarks);
-  }catch(err){
+  } catch (err) {
     console.error(err);
-    res.status(500).json({message:"server error"})
-
+    res.status(500).json({ message: "server error" });
   }
-})
+});
 
 // Example route to remove a bookmark by ID
-app.delete('/bookmark/:id', async (req, res) => {
+app.delete("/bookmark/:id", async (req, res) => {
   const bookmarkId = req.params.id;
-  console.log("id of book:",bookmarkId);
+  console.log("id of book:", bookmarkId);
 
   try {
     // Use Mongoose to find and remove the bookmark by ID
-    const deletedBookmark = await bookmark.findOneAndDelete({ bookmarkId: bookmarkId });
+    const deletedBookmark = await bookmark.findOneAndDelete({
+      bookmarkId: bookmarkId,
+    });
 
     if (!deletedBookmark) {
-      return res.status(404).json({ message: 'Bookmark not found' });
+      return res.status(404).json({ message: "Bookmark not found" });
     }
 
-    res.json({ message: 'Bookmark deleted successfully' });
+    res.json({ message: "Bookmark deleted successfully" });
   } catch (error) {
-    console.error('Error deleting bookmark:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error deleting bookmark:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
+// using multer to upload data
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./files");
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now();
+    cb(null, uniqueSuffix + file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
+
+// posting contact-info
+app.put("/contact-info", upload.single("resume"), async (req, res) => {
+  try {
+    const {
+      contactId,
+      contactFullName,
+      contactEmail,
+      contactPhoneNo,
+      contactCountry,
+      contactStreet,
+      contactCity,
+      contactPincode,
+    } = req.body;
+
+    const fileName = req.file ? req.file.filename : null;
+
+    // Validate required fields
+    if (!contactId) {
+      return res.status(400).json({ message: "contactId is required" });
+    }
+
+    const updateData = {
+      contactId,
+      contactFullName,
+      contactEmail,
+      contactPhoneNo,
+      contactCountry,
+      contactStreet,
+      contactCity,
+      contactPincode,
+    };
+
+    if (fileName) {
+      updateData.resume = fileName;
+    }
+
+    const updatedContactInfo = await contactInfo.findOneAndUpdate(
+      { contactId },
+      updateData,
+      { new: true, upsert: true }
+    );
+
+    res
+      .status(201)
+      .json({ message: "Contact updated successfully", updatedContactInfo });
+  } catch (err) {
+    console.error("Server error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// getting contact-info
+app.get("/contact-data", async (req, res) => {
+  try {
+    const contactData = await contactInfo.find({});
+    res.status(200).json(contactData);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+    console.error(err);
+  }
+});
+
+app.post("/applied", async (req, res) => {
+  const {
+    applyId,
+    applyCompanyName,
+    applyJobTitle,
+    applyFullName,
+    applyEmail,
+    applyMobileNo,
+    applyResume,
+    applyExperience,
+    applyEducation,
+    applySkills,
+    applyLanguages,
+    jobApplied
+  } = req.body;
+
+  try {
+    const newApplied = new applied({
+      applyId,
+      applyCompanyName,
+      applyJobTitle,
+      applyFullName,
+      applyEmail,
+      applyMobileNo,
+      applyResume,
+      applyExperience,
+      applyEducation,
+      applySkills,
+      applyLanguages,
+      jobApplied
+    });
+
+    await newApplied.save();
+    res.status(201).json({ message: "Applied successfully!" });
+  } catch (err) {
+    res.status(500).json({ message: "server error" });
+    console.error(err);
+  }
+});
+
+// posting qualification
+
+app.put("/qualification", async (req, res) => {
+  const { qualifyId, experience, education, skills, languages } = req.body;
+
+  try {
+    const updatedQualify = await qualification.findOneAndUpdate(
+      { qualifyId },
+      {
+        qualifyId,
+        experience,
+        education,
+        skills,
+        languages,
+      },
+      { new: true, upsert: true }
+    );
+
+    if (updatedQualify) {
+      res.status(200).json({ message: "Qualification updated successfully!" });
+    } else {
+      res.status(404).json({ message: "Qualification not found" });
+    }
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+    console.error(err);
+  }
+});
+
+app.get("/getQualify", async (req, res) => {
+  try {
+    const newQualifyData = await qualification.find({});
+    console.log("newQualify", newQualifyData);
+    res.status(200).json(newQualifyData);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+    console.error(err);
+  }
+});
 
 /////////////////////////////////       For Employer       /////////////////////////////////
 
@@ -401,3 +561,12 @@ app.get("/postedjob", async (req, res) => {
       .json({ message: "An error occurred while fetching job posts", error });
   }
 });
+
+app.get('/applied-data', async(req, res)=>{
+  try{
+    const newApply = await applied.find({});
+    res.status(200).json(newApply)
+  }catch(err){
+    res.status(500).json({message:"server error"})
+  }
+})
