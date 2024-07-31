@@ -32,6 +32,8 @@ db.once("open", () => console.log("Connected to mongoDB"));
 
 ///////////////////////////////////////    For User    /////////////////////////////////////////////
 
+const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+
 // userSignUp
 app.post("/signup", async (req, res) => {
   console.log("request", req);
@@ -43,6 +45,10 @@ app.post("/signup", async (req, res) => {
     userSignMobileNo,
   } = req.body;
   try {
+
+    if (!emailPattern.test(userSignEmail)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
     const existingUser = await userSignUp.findOne({ userSignEmail });
     if (existingUser) {
       console.log(existingUser);
@@ -296,7 +302,10 @@ app.post("/applied", async (req, res) => {
     applyEducation,
     applySkills,
     applyLanguages,
-    jobApplied
+    jobApplied,
+    preferred,
+    viewed,
+    timeStamp
   } = req.body;
 
   try {
@@ -312,7 +321,10 @@ app.post("/applied", async (req, res) => {
       applyEducation,
       applySkills,
       applyLanguages,
-      jobApplied
+      jobApplied,
+      preferred,
+      viewed,
+      timeStamp
     });
 
     await newApplied.save();
@@ -357,6 +369,31 @@ app.get("/getQualify", async (req, res) => {
     const newQualifyData = await qualification.find({});
     console.log("newQualify", newQualifyData);
     res.status(200).json(newQualifyData);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+    console.error(err);
+  }
+});
+
+app.put("/viewed/:id", async (req, res) => {
+  const id = req.params.id;
+  console.log("Viewed", id);
+
+  const { viewed } = req.body;
+  if (!viewed) {
+    return res.status(400).json({ message: "Preferred field is required" });
+  }
+  try {
+    const putApply = await applied.findOneAndUpdate(
+      { _id: id },
+      { $set: { viewed: viewed } },
+      { new: true, upsert: false }
+    );
+    if (putApply) {
+      res.status(200).json({ message: "Notification updated successfully!" });
+    } else {
+      res.status(404).json({ message: "Notification not found" });
+    }
   } catch (err) {
     res.status(500).json({ message: "Server error" });
     console.error(err);
@@ -497,6 +534,7 @@ app.get("/employdata", verifyTokenEmploy, async (req, res) => {
 app.post("/jobpost", verifyTokenEmploy, async (req, res) => {
   const {
     companyName,
+    noOfEmployers,
     companyIndustry,
     companyDescription,
     jobTitle,
@@ -511,6 +549,8 @@ app.post("/jobpost", verifyTokenEmploy, async (req, res) => {
     jobMaxValue,
     jobRate,
     jobSkill,
+    isActive,
+    timeStamp
   } = req.body;
 
   const userId = req.userId;
@@ -519,6 +559,7 @@ app.post("/jobpost", verifyTokenEmploy, async (req, res) => {
     const newJobPost = {
       userId: userId,
       companyName,
+      noOfEmployers,
       companyIndustry,
       companyDescription,
       jobTitle,
@@ -533,6 +574,8 @@ app.post("/jobpost", verifyTokenEmploy, async (req, res) => {
       jobMaxValue,
       jobRate,
       jobSkill,
+      isActive,
+      timeStamp
     };
 
     const jobPost = await jobPostData.findOneAndUpdate(
@@ -562,11 +605,70 @@ app.get("/postedjob", async (req, res) => {
   }
 });
 
-app.get('/applied-data', async(req, res)=>{
-  try{
+// getting Applied data
+app.get("/applied-data", async (req, res) => {
+  try {
     const newApply = await applied.find({});
-    res.status(200).json(newApply)
-  }catch(err){
-    res.status(500).json({message:"server error"})
+    res.status(200).json(newApply);
+  } catch (err) {
+    res.status(500).json({ message: "server error" });
   }
-})
+});
+
+// Put the applied data
+app.put("/prefer/:id", async (req, res) => {
+  const id = req.params.id;
+  console.log("Prefer", id);
+
+  const { preferred } = req.body;
+  if (!preferred) {
+    return res.status(400).json({ message: "Preferred field is required" });
+  }
+
+  try {
+    const putApply = await applied.findOneAndUpdate(
+      { _id: id },
+      { $set: { preferred: preferred } },
+      { new: true, upsert: false }
+    );
+    if (putApply) {
+      res
+        .status(200)
+        .json({ message: "Application updated successfully!", data: putApply });
+    } else {
+      res.status(404).json({ message: "Application not found" });
+    }
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+    console.error(err);
+  }
+});
+
+
+// Updating the isActive field of a specific job post
+app.put("/jobEdit/:id", verifyTokenEmploy, async (req, res) => {
+  const { id } = req.params; // Get the job post ID from the request parameters
+  const { isActive } = req.body; // Get the new isActive value from the request body
+  const userId = req.userId; // Get the user ID from the token
+
+  try {
+    // Find the job post by ID and update the isActive field
+    const updatedJobPost = await jobPostData.findOneAndUpdate(
+      { "jobPosts._id": id}, // Find the job post by ID and ensure it belongs to the user
+      { $set: { "jobPosts.$.isActive": isActive } }, // Update the isActive field
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedJobPost) {
+      return res.status(404).json({ message: "Job post not found" });
+    }
+
+    res.status(200).json({
+      message: "Job post updated successfully",
+      jobPost: updatedJobPost
+    });
+  } catch (err) {
+    console.error("Error updating job post:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});

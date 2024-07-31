@@ -11,6 +11,7 @@ const JobPostingSchema = new Schema({
         required: true,
       },
       companyName:{ type: String, required: true },
+      noOfEmployers:{type:Number, required: true },
       companyIndustry: { type: String, required: true },
       companyDescription: { type: String, required: true },
       jobTitle: { type: String, required: true },
@@ -25,6 +26,8 @@ const JobPostingSchema = new Schema({
       jobMaxValue: { type: Number, required: true },
       jobRate: { type: String, required: true },
       jobSkill: {type: String, required: true},
+      isActive: {type: Boolean, required:false},
+      timeStamp:{type: Date, required:false}
     },
   ],
 });

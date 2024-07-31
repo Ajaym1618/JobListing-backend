@@ -25,7 +25,10 @@ const AppliedSchemaModel = new Schema({
     applyEducation: {type:[EducationSchema], require:true},
     applySkills: {type: [String], require:true},
     applyLanguages: {type: [String], require:true},
-    jobApplied: {type:Boolean, require:true}
+    jobApplied: {type:Boolean, require:true},
+    preferred: {type:String, require:false},
+    viewed:{type:String, require:false},
+    timeStamp:{type:Date,require:false}
 })
 
 module.exports = mongoose.model('AppliedData', AppliedSchemaModel)
