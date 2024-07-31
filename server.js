@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require('path');
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
@@ -18,6 +19,7 @@ const qualification = require("./model/qualificationModel");
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+app.use('/files',express.static(path.join(__dirname, 'files')))
 
 // mongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
@@ -671,4 +673,22 @@ app.put("/jobEdit/:id", verifyTokenEmploy, async (req, res) => {
     console.error("Error updating job post:", err);
     res.status(500).json({ message: "Internal server error" });
   }
+});
+
+
+// Endpoint to get a file by name
+app.get('/files/:name', (req, res) => {
+  const { name } = req.params;
+  console.log("Filename", name);
+
+  // Construct the path to the file
+  const filePath = path.join(__dirname, 'files', name);
+
+  // Send the file to the client
+  res.sendFile(filePath, err => {
+      if (err) {
+          console.error('File not found:', err);
+          res.status(404).send('File not found');
+      }
+  });
 });
