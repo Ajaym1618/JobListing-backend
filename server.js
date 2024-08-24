@@ -218,7 +218,7 @@ app.delete("/bookmark/:id", async (req, res) => {
 // using multer to upload data
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: function (req, file, cb) { 
     cb(null, "./files");
   },
   filename: function (req, file, cb) {
@@ -482,8 +482,7 @@ app.post("/employerlogin", async (req, res) => {
   res.status(200).json({ token });
 });
 
-const port = process.env.PORT || 5000;
-app.listen(port, () => console.log("Server connected to", port));
+
 
 // Employer token verify and authentication
 
@@ -692,3 +691,12 @@ app.get('/files/:name', (req, res) => {
       }
   });
 });
+
+
+
+
+
+
+
+const port = process.env.PORT || 5000;
+app.listen(port, () => console.log("Server connected to", port));
