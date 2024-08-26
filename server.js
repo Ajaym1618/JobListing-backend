@@ -274,13 +274,12 @@ app.put("/contact-info", upload.single("resume"), async (req, res) => {
       updateData,
       { new: true, upsert: true }
     );
-
     res
       .status(201)
       .json({ message: "Contact updated successfully", updatedContactInfo });
   } catch (err) {
     console.error("Server error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({message:"Server error", error: err.message });
   }
 });
 
