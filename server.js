@@ -17,7 +17,11 @@ const qualification = require("./model/qualificationModel");
 
 // middleware
 const app = express();
-app.use(cors());
+  app.use(cors({
+  origin: 'https://careercraze.vercel.app',
+  optionsSuccessStatus: 200
+}));
+
 app.use(bodyParser.json());
 app.use('/files',express.static(path.join(__dirname, 'files')))
 
