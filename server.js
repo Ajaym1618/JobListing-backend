@@ -247,7 +247,7 @@ app.put("/contact-info", upload.single("resume"), async (req, res) => {
       contactPincode,
     } = req.body;
 
-    const fileName = req.file ? req.file.filename : null;
+    const fileName = req.file ? req.file.filename : "resume";
 
     // Validate required fields
     if (!contactId) {
