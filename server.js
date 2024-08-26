@@ -1,7 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const path = require('path');
+const path = require("path");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
@@ -17,13 +17,15 @@ const qualification = require("./model/qualificationModel");
 
 // middleware
 const app = express();
-  app.use(cors({
-  origin: 'https://careercraze.vercel.app',
-  optionsSuccessStatus: 200
-}));
+app.use(
+  cors({
+    origin: "https://careercraze.vercel.app",
+    optionsSuccessStatus: 200,
+  })
+);
 
 app.use(bodyParser.json());
-app.use('/files',express.static(path.join(__dirname, 'files')))
+app.use("/files", express.static(path.join(__dirname, "files")));
 
 // mongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
@@ -51,9 +53,8 @@ app.post("/signup", async (req, res) => {
     userSignMobileNo,
   } = req.body;
   try {
-
     if (!emailPattern.test(userSignEmail)) {
-      return res.status(400).json({ message: 'Invalid email format' });
+      return res.status(400).json({ message: "Invalid email format" });
     }
     const existingUser = await userSignUp.findOne({ userSignEmail });
     if (existingUser) {
@@ -222,7 +223,7 @@ app.delete("/bookmark/:id", async (req, res) => {
 // using multer to upload data
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) { 
+  destination: function (req, file, cb) {
     cb(null, "./files");
   },
   filename: function (req, file, cb) {
@@ -248,6 +249,8 @@ app.put("/contact-info", upload.single("resume"), async (req, res) => {
     } = req.body;
 
     const fileName = req.file ? req.file.filename : "resume";
+    console.log(fileName);
+    
 
     // Validate required fields
     if (!contactId) {
@@ -279,7 +282,7 @@ app.put("/contact-info", upload.single("resume"), async (req, res) => {
       .json({ message: "Contact updated successfully", updatedContactInfo });
   } catch (err) {
     console.error("Server error:", err);
-    res.status(500).json({message:"Server error", error: err.message });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
@@ -310,7 +313,7 @@ app.post("/applied", async (req, res) => {
     jobApplied,
     preferred,
     viewed,
-    timeStamp
+    timeStamp,
   } = req.body;
 
   try {
@@ -329,7 +332,7 @@ app.post("/applied", async (req, res) => {
       jobApplied,
       preferred,
       viewed,
-      timeStamp
+      timeStamp,
     });
 
     await newApplied.save();
@@ -485,8 +488,6 @@ app.post("/employerlogin", async (req, res) => {
   res.status(200).json({ token });
 });
 
-
-
 // Employer token verify and authentication
 
 const verifyTokenEmploy = (req, res, next) => {
@@ -554,7 +555,7 @@ app.post("/jobpost", verifyTokenEmploy, async (req, res) => {
     jobRate,
     jobSkill,
     isActive,
-    timeStamp
+    timeStamp,
   } = req.body;
 
   const userId = req.userId;
@@ -579,7 +580,7 @@ app.post("/jobpost", verifyTokenEmploy, async (req, res) => {
       jobRate,
       jobSkill,
       isActive,
-      timeStamp
+      timeStamp,
     };
 
     const jobPost = await jobPostData.findOneAndUpdate(
@@ -648,7 +649,6 @@ app.put("/prefer/:id", async (req, res) => {
   }
 });
 
-
 // Updating the isActive field of a specific job post
 app.put("/jobEdit/:id", verifyTokenEmploy, async (req, res) => {
   const { id } = req.params; // Get the job post ID from the request parameters
@@ -658,7 +658,7 @@ app.put("/jobEdit/:id", verifyTokenEmploy, async (req, res) => {
   try {
     // Find the job post by ID and update the isActive field
     const updatedJobPost = await jobPostData.findOneAndUpdate(
-      { "jobPosts._id": id}, // Find the job post by ID and ensure it belongs to the user
+      { "jobPosts._id": id }, // Find the job post by ID and ensure it belongs to the user
       { $set: { "jobPosts.$.isActive": isActive } }, // Update the isActive field
       { new: true } // Return the updated document
     );
@@ -669,7 +669,7 @@ app.put("/jobEdit/:id", verifyTokenEmploy, async (req, res) => {
 
     res.status(200).json({
       message: "Job post updated successfully",
-      jobPost: updatedJobPost
+      jobPost: updatedJobPost,
     });
   } catch (err) {
     console.error("Error updating job post:", err);
@@ -677,29 +677,22 @@ app.put("/jobEdit/:id", verifyTokenEmploy, async (req, res) => {
   }
 });
 
-
 // Endpoint to get a file by name
-app.get('/files/:name', (req, res) => {
+app.get("/files/:name", (req, res) => {
   const { name } = req.params;
   console.log("Filename", name);
 
   // Construct the path to the file
-  const filePath = path.join(__dirname, 'files', name);
+  const filePath = path.join(__dirname, "files", name);
 
   // Send the file to the client
-  res.sendFile(filePath, err => {
-      if (err) {
-          console.error('File not found:', err);
-          res.status(404).send('File not found');
-      }
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("File not found:", err);
+      res.status(404).send("File not found");
+    }
   });
 });
-
-
-
-
-
-
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => console.log("Server connected to", port));
